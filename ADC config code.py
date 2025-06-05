@@ -9,7 +9,7 @@ import spidev # Re-added: Needed for SPI communication
 import RPi.GPIO as GPIO
 import time
 
-SYNC_PIN = 8 # Example: GPIO8 (CE0 on SPI0 header)
+SYNC_PIN = 10 # Example: GPIO8 (CE0 on SPI0 header)
 
 
 SPI_BUS = 0
@@ -266,7 +266,7 @@ if __name__ == "__main__":
         log_message(f"An unexpected error occurred: {e}", 'error')
     finally:
         # Clean up GPIO and SPI resources
-        if 'spi' in locals() and spi.fd is not None:
+        if 'spi' in locals():
             spi.close()
             log_message("SPI bus closed.", 'info')
         GPIO.cleanup()
