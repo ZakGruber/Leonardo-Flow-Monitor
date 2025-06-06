@@ -1,9 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jun  6 11:45:53 2025
+
+@author: Zakary.Gruber
+"""
+
 import RPi.GPIO as GPIO
 import tkinter as tk
 from tkinter import messagebox
 import time
 import datetime
-import threading
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -47,44 +53,63 @@ def update_labels():
     status_label.config(text=f"Current status: {current_status}")
     shutoff_label.config(text=f"System shutoff recorded at: {last_shutoff_date}")
 
-# Function to monitor sensor values
+# Function to monitor sensor values (Runs before updating graph)
 def monitor_sensor_values():
-    global last_shutoff_date, start_time, current_status, ignore_threshold, sensor_differences, time_stamps, flow_count1, flow_count2
+    global last_shutoff_date, start_time, current_status, ignore_threshold
+    global sensor_differences, time_stamps, flow_count1, flow_count2
     
-    while True:
-        rate1 = flow_count1 / PULSES_PER_GALLON
-        rate2 = flow_count2 / PULSES_PER_GALLON
-        flow_count1 = 0
-        flow_count2 = 0
-        
-        difference = abs(rate1 - rate2)
+    rate1 = flow_count1 / PULSES_PER_GALLON
+    rate2 = flow_count2 / PULSES_PER_GALLON
+    flow_count1 = 0
+    flow_count2 = 0
 
-        if not ignore_threshold:
-            sensor_differences.append(difference)
-            time_stamps.append(time.time())
+    difference = abs(rate1 - rate2)
 
-            if len(sensor_differences) > 100:
-                sensor_differences.pop(0)
-                time_stamps.pop(0)
+    if not ignore_threshold:
+        sensor_differences.append(difference)
+        time_stamps.append(time.time())
 
-        if difference > current_tolerance:
-            if start_time is None:
-                start_time = time.time()
+        # Limit history size
+        if len(sensor_differences) > 100:
+            sensor_differences.pop(0)
+            time_stamps.pop(0)
 
-            elapsed_time = time.time() - start_time
+    # Shutoff logic
+    if difference > current_tolerance:
+        if start_time is None:
+            start_time = time.time()
 
-            if elapsed_time >= duration_threshold:
-                last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                current_status = "Deactivated"
-                update_labels()
-                start_time = None
-        else:
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= duration_threshold:
+            last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            current_status = "Deactivated"
+            update_labels()
             start_time = None
+    else:
+        start_time = None
 
-        time.sleep(1)
+    # Call graph update **after sensor values are processed**
+    root.after(1000, update_graph)
 
-monitor_thread = threading.Thread(target=monitor_sensor_values, daemon=True)
-monitor_thread.start()
+# Function to update graph
+def update_graph():
+    global time_stamps, sensor_differences
+
+    if time_stamps and sensor_differences and len(time_stamps) == len(sensor_differences):
+        # Normalize timestamps relative to the first recorded time
+        normalized_timestamps = [t - time_stamps[0] for t in time_stamps]
+
+        ax.clear()
+        ax.plot(normalized_timestamps, sensor_differences, label="Flow Rate Difference (GPM)")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Flow Rate Difference (GPM)")
+        ax.legend()
+        ax.relim()
+        ax.autoscale_view()
+        canvas.draw()
+
+    # Schedule next sensor read **after** graph update
+    root.after(1000, monitor_sensor_values)
 
 # GUI Setup
 root = tk.Tk()
@@ -127,7 +152,7 @@ def activate_system():
     current_status = "System Active"
     update_labels()
     ignore_threshold = True
-    threading.Timer(10, reset_ignore_threshold).start()
+    root.after(10000, reset_ignore_threshold)  # Use Tkinter instead of threading.Timer
 
 # Function to deactivate system
 def deactivate_system():
@@ -156,22 +181,8 @@ fig, ax = plt.subplots(figsize=(5, 3))
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.get_tk_widget().pack()
 
-def update_graph():
-    if time_stamps and sensor_differences:
-        min_time = min(time_stamps)
-        normalized_timestamps = [t - min_time for t in time_stamps]
-
-        ax.clear()
-        ax.plot(normalized_timestamps, sensor_differences, label="Flow Rate Difference (GPM)")
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Flow Rate Difference (GPM)")
-        ax.legend()
-        canvas.draw()
-
-    root.after(1000, update_graph)
-
-# Update graph continuously
-update_graph()
+# Start monitoring sensors
+monitor_sensor_values()
 
 # Run the Tkinter loop
 root.mainloop()
