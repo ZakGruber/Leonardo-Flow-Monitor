@@ -100,9 +100,9 @@ def update_graph():
         normalized_timestamps = [t - time_stamps[0] for t in time_stamps]
 
         ax.clear()
-        ax.plot(normalized_timestamps, sensor_differences, label="Flow Rate Difference (GPM)")
+        ax.plot(normalized_timestamps, sensor_differences, label="Flow Rate Difference (gal/s)")
         ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Flow Rate Difference (GPM)")
+        ax.set_ylabel("Amount (gallons)")
         ax.set_ylim(bottom=0)  # Ensure y-axis always starts at 0
         ax.legend()
         ax.relim()
