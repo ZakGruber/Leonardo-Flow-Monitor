@@ -103,6 +103,7 @@ def update_graph():
         ax.plot(normalized_timestamps, sensor_differences, label="Flow Rate Difference (GPM)")
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Flow Rate Difference (GPM)")
+        ax.set_ylim(bottom=0)  # Ensure y-axis always starts at 0
         ax.legend()
         ax.relim()
         ax.autoscale_view()
@@ -114,6 +115,7 @@ def update_graph():
 # GUI Setup
 root = tk.Tk()
 root.title("Water Flow Monitor")
+root.geometry("600x400")  # Adjust window size for legibility
 
 # Status Labels
 info_label = tk.Label(root, text="INFORMATION AND NAVIGATION", font=("Arial", 14, "bold"))
@@ -125,6 +127,9 @@ shutoff_label.pack()
 status_label = tk.Label(root, text=f"Current status: {current_status}")
 status_label.pack()
 
+recommended_tolerance_label = tk.Label(root, text="Recommended Tolerance: 0.0055", font=("Arial", 12, "bold"))
+recommended_tolerance_label.pack()
+
 # Control Panel
 control_frame = tk.Frame(root)
 control_frame.pack(pady=10)
@@ -132,49 +137,6 @@ control_frame.pack(pady=10)
 tk.Label(control_frame, text="Control Panel", font=("Arial", 12)).pack()
 tk.Button(control_frame, text="ON", command=lambda: activate_system()).pack(side=tk.LEFT, padx=5)
 tk.Button(control_frame, text="OFF", command=lambda: deactivate_system()).pack(side=tk.RIGHT, padx=5)
-
-# Tolerance Setting
-tolerance_frame = tk.Frame(root)
-tolerance_frame.pack(pady=10)
-
-tk.Label(tolerance_frame, text="Set Tolerance", font=("Arial", 12)).pack()
-tolerance_label = tk.Label(tolerance_frame, text=f"Current Tolerance: {current_tolerance}")
-tolerance_label.pack()
-
-tolerance_input = tk.Entry(tolerance_frame)
-tolerance_input.pack()
-
-tk.Button(tolerance_frame, text="Submit", command=lambda: update_tolerance()).pack()
-
-# Function to activate system
-def activate_system():
-    global current_status, ignore_threshold
-    current_status = "System Active"
-    update_labels()
-    ignore_threshold = True
-    root.after(10000, reset_ignore_threshold)  # Use Tkinter instead of threading.Timer
-
-# Function to deactivate system
-def deactivate_system():
-    global current_status, last_shutoff_date
-    current_status = "Deactivated"
-    last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    update_labels()
-
-# Function to reset ignore threshold
-def reset_ignore_threshold():
-    global ignore_threshold
-    ignore_threshold = False
-
-# Function to update tolerance
-def update_tolerance():
-    global current_tolerance
-    try:
-        current_tolerance = float(tolerance_input.get())
-        tolerance_label.config(text=f"Current Tolerance: {current_tolerance}")
-        messagebox.showinfo("Success", "Tolerance updated successfully!")
-    except ValueError:
-        messagebox.showerror("Error", "Please enter a valid float value")
 
 # Graph Display
 fig, ax = plt.subplots(figsize=(5, 3))
