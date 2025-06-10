@@ -27,7 +27,7 @@ PULSES_PER_GALLON = 2840
 ignore_threshold = False
 last_shutoff_date = "No shutoff recorded"
 current_status = "Deactivated"
-current_tolerance = 1.6
+current_tolerance = .0055
 
 sensor_differences = []
 time_stamps = []
