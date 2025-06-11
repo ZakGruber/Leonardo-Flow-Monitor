@@ -75,7 +75,7 @@ def monitor_sensor_values():
             time_stamps.pop(0)
 
     # Shutoff logic
-    if difference > current_tolerance:
+    if difference > abs(current_tolerance):
         if start_time is None:
             start_time = time.time()
 
@@ -115,7 +115,7 @@ def update_graph():
 # GUI Setup
 root = tk.Tk()
 root.title("Water Flow Monitor")
-root.geometry("600x400")  # Adjust window size for legibility
+root.geometry("600x650")  # Adjust window size for legibility
 
 # Status Labels
 info_label = tk.Label(root, text="INFORMATION AND NAVIGATION", font=("Arial", 14, "bold"))
@@ -130,6 +130,48 @@ status_label.pack()
 recommended_tolerance_label = tk.Label(root, text="Recommended Tolerance: 0.0055", font=("Arial", 12, "bold"))
 recommended_tolerance_label.pack()
 
+tolerance_frame = tk.Frame(root)
+tolerance_frame.pack(pady=10)
+
+tk.Label(tolerance_frame, text="Set Tolerance", font=("Arial", 12)).pack()
+tolerance_label = tk.Label(tolerance_frame, text=f"Current Tolerance: {current_tolerance}")
+tolerance_label.pack()
+
+tolerance_input = tk.Entry(tolerance_frame)
+tolerance_input.pack()
+
+tk.Button(tolerance_frame, text="Submit", command=lambda: update_tolerance()).pack()
+
+# Function to activate system
+def activate_system():
+    global current_status, ignore_threshold
+    current_status = "System Active"
+    update_labels()
+    ignore_threshold = True
+    root.after(10000, reset_ignore_threshold)  # Use Tkinter instead of threading.Timer
+
+# Function to deactivate system
+def deactivate_system():
+    global current_status, last_shutoff_date
+    current_status = "Deactivated"
+    last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    update_labels()
+
+# Function to reset ignore threshold
+def reset_ignore_threshold():
+    global ignore_threshold
+    ignore_threshold = False
+
+# Function to update tolerance
+def update_tolerance():
+    global current_tolerance
+    try:
+        current_tolerance = float(tolerance_input.get())
+        tolerance_label.config(text=f"Current Tolerance: {current_tolerance}")
+        messagebox.showinfo("Success", "Tolerance updated successfully!")
+    except ValueError:
+        messagebox.showerror("Error", "Please enter a valid float value")
+        
 # Control Panel
 control_frame = tk.Frame(root)
 control_frame.pack(pady=10)
@@ -139,7 +181,7 @@ tk.Button(control_frame, text="ON", command=lambda: activate_system()).pack(side
 tk.Button(control_frame, text="OFF", command=lambda: deactivate_system()).pack(side=tk.RIGHT, padx=5)
 
 # Graph Display
-fig, ax = plt.subplots(figsize=(5, 3))
+fig, ax = plt.subplots(figsize=(6, 5))
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.get_tk_widget().pack()
 
