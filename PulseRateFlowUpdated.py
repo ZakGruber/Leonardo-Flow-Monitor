@@ -17,9 +17,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 GPIO.setmode(GPIO.BCM)
 SENSOR1_PIN = 17  # Example GPIO pin for sensor 1
 SENSOR2_PIN = 18  # Example GPIO pin for sensor 2
+SOLENOID_PIN = 27
 
 GPIO.setup(SENSOR1_PIN, GPIO.IN)
 GPIO.setup(SENSOR2_PIN, GPIO.IN)
+GPIO.setup(SOLENOID_PIN, GPIO.OUT)
 
 PULSES_PER_GALLON = 2840
 
@@ -81,6 +83,7 @@ def monitor_sensor_values():
 
         elapsed_time = time.time() - start_time
         if elapsed_time >= duration_threshold:
+            GPIO.output(SOLENOID_PIN, GPIO.HIGH)
             last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             current_status = "Deactivated"
             update_labels()
@@ -145,6 +148,7 @@ tk.Button(tolerance_frame, text="Submit", command=lambda: update_tolerance()).pa
 # Function to activate system
 def activate_system():
     global current_status, ignore_threshold
+    GPIO.output(SOLENOID_PIN, GPIO.LOW)
     current_status = "System Active"
     update_labels()
     ignore_threshold = True
@@ -153,6 +157,7 @@ def activate_system():
 # Function to deactivate system
 def deactivate_system():
     global current_status, last_shutoff_date
+    GPIO.output(SOLENOID_PIN, GPIO.HIGH)
     current_status = "Deactivated"
     last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     update_labels()
