@@ -29,12 +29,12 @@ def graceful_exit(signum, frame):
     GPIO.cleanup()
     sys.exit(0)
 
-signal.signal(signal.SIGINT, graceful_exit)
-signal.signal(signal.SIGTERM, graceful_exit)
-
 GPIO.setup(SENSOR1_PIN, GPIO.IN)
 GPIO.setup(SENSOR2_PIN, GPIO.IN)
 GPIO.setup(SOLENOID_PIN, GPIO.OUT)
+
+signal.signal(signal.SIGINT, graceful_exit)
+signal.signal(signal.SIGTERM, graceful_exit)
 
 PULSES_PER_GALLON = 2840
 
