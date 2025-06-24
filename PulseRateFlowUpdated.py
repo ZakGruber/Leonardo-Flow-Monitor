@@ -12,12 +12,25 @@ import time
 import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import sys
+import signal
+
+
 
 # Initialize GPIO pins
 GPIO.setmode(GPIO.BCM)
 SENSOR1_PIN = 17  # Example GPIO pin for sensor 1
 SENSOR2_PIN = 18  # Example GPIO pin for sensor 2
 SOLENOID_PIN = 27
+
+def graceful_exit(signum, frame):
+    GPIO.output(SOLENOID_PIN, GPIO.HIGH)
+    time.sleep(1)
+    GPIO.cleanup()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, graceful_exit)
+signal.signal(signal.SIGTERM, graceful_exit)
 
 GPIO.setup(SENSOR1_PIN, GPIO.IN)
 GPIO.setup(SENSOR2_PIN, GPIO.IN)
@@ -194,7 +207,10 @@ canvas.get_tk_widget().pack()
 monitor_sensor_values()
 
 # Run the Tkinter loop
-root.mainloop()
-
-# Cleanup GPIO when the script exits
-GPIO.cleanup()
+try:
+    root.mainloop()
+finally:
+    # Cleanup GPIO when the script exits
+    GPIO.output(SOLENOID_PIN, GPIO.HIGH)
+    time.sleep(1)
+    GPIO.cleanup()
