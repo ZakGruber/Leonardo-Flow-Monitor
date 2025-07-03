@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun  6 11:45:53 2025
+Created on Wed Jul 2 2025
 
 @author: Zakary.Gruber
 """
-
 import RPi.GPIO as GPIO
 import tkinter as tk
+import tkinter.simpledialog as sd
 from tkinter import messagebox
 import time
 import datetime
@@ -15,12 +15,10 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import sys
 import signal
 
-
-
 # Initialize GPIO pins
 GPIO.setmode(GPIO.BCM)
-SENSOR1_PIN = 17  # Example GPIO pin for sensor 1
-SENSOR2_PIN = 18  # Example GPIO pin for sensor 2
+SENSOR1_PIN = 17
+SENSOR2_PIN = 18
 SOLENOID_PIN = 27
 
 def graceful_exit(signum, frame):
@@ -29,6 +27,7 @@ def graceful_exit(signum, frame):
     GPIO.cleanup()
     sys.exit(0)
 
+# Activate GPIO pins
 GPIO.setup(SENSOR1_PIN, GPIO.IN)
 GPIO.setup(SENSOR2_PIN, GPIO.IN)
 GPIO.setup(SOLENOID_PIN, GPIO.OUT)
@@ -38,20 +37,24 @@ signal.signal(signal.SIGTERM, graceful_exit)
 
 PULSES_PER_GALLON = 2840
 
-# Initialize global variables
-ignore_threshold = False
-last_shutoff_date = "No shutoff recorded"
-current_status = "Deactivated"
-current_tolerance = .0055
-
-sensor_differences = []
-time_stamps = []
-flow_count1 = 0
-flow_count2 = 0
+# Global Variables
+current_password   = "admin123"
+ignore_threshold   = False
+last_shutoff_date  = "No shutoff recorded"
+current_status     = "Inactive"
+current_tolerance  = 0
+system_name        = "Flow Monitor 1"
 duration_threshold = 10
-start_time = None
 
-# Interrupt handler to count pulses
+# Active variables
+sensor_differences = []
+time_stamps        = []
+flow_count1        = 0
+flow_count2        = 0
+start_time         = None
+
+
+# Functions to recieve a signal from the flow monitors
 def pulse_detected1(channel):
     global flow_count1
     flow_count1 += 1
@@ -63,16 +66,15 @@ def pulse_detected2(channel):
 GPIO.add_event_detect(SENSOR1_PIN, GPIO.RISING, callback=pulse_detected1)
 GPIO.add_event_detect(SENSOR2_PIN, GPIO.RISING, callback=pulse_detected2)
 
-# Function to update labels
+# Automatic functions
 def update_labels():
-    status_label.config(text=f"Current status: {current_status}")
-    shutoff_label.config(text=f"System shutoff recorded at: {last_shutoff_date}")
+    status_label.config(text=f"Current cooling state: {current_status}")
+    shutoff_label.config(text=f"Last shutoff logged at: {last_shutoff_date}")
 
-# Function to monitor sensor values (Runs before updating graph)
 def monitor_sensor_values():
     global last_shutoff_date, start_time, current_status, ignore_threshold
     global sensor_differences, time_stamps, flow_count1, flow_count2
-    
+
     rate1 = flow_count1 / PULSES_PER_GALLON
     rate2 = flow_count2 / PULSES_PER_GALLON
     flow_count1 = 0
@@ -84,133 +86,159 @@ def monitor_sensor_values():
         sensor_differences.append(difference)
         time_stamps.append(time.time())
 
-        # Limit history size
         if len(sensor_differences) > 100:
             sensor_differences.pop(0)
             time_stamps.pop(0)
 
-    # Shutoff logic
     if difference > abs(current_tolerance):
         if start_time is None:
             start_time = time.time()
-
         elapsed_time = time.time() - start_time
         if elapsed_time >= duration_threshold:
             GPIO.output(SOLENOID_PIN, GPIO.HIGH)
             last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            current_status = "Deactivated"
+            current_status = "Inactive"
             update_labels()
             start_time = None
     else:
         start_time = None
 
-    # Call graph update **after sensor values are processed**
     root.after(1000, update_graph)
 
-# Function to update graph
 def update_graph():
     global time_stamps, sensor_differences
 
     if time_stamps and sensor_differences and len(time_stamps) == len(sensor_differences):
-        # Normalize timestamps relative to the first recorded time
-        normalized_timestamps = [t - time_stamps[0] for t in time_stamps]
-
+        normalized_t = [t - time_stamps[0] for t in time_stamps]
         ax.clear()
-        ax.plot(normalized_timestamps, sensor_differences, label="Flow Rate Difference (gal/s)")
+        ax.plot(normalized_t, sensor_differences, label="Flow Rate Difference (gal/s)")
         ax.set_xlabel("Time (s)")
         ax.set_ylabel("Amount (gallons)")
-        ax.set_ylim(bottom=0)  # Ensure y-axis always starts at 0
+        ax.set_ylim(bottom=0)
         ax.legend()
         ax.relim()
         ax.autoscale_view()
         canvas.draw()
 
-    # Schedule next sensor read **after** graph update
     root.after(1000, monitor_sensor_values)
 
-# GUI Setup
+# GUI
+# Main window
 root = tk.Tk()
 root.title("Water Flow Monitor")
-root.geometry("600x650")  # Adjust window size for legibility
+root.geometry("600x650")
 
-# Status Labels
-info_label = tk.Label(root, text="INFORMATION AND NAVIGATION", font=("Arial", 14, "bold"))
+info_label = tk.Label(root, text=system_name, font=("Arial", 14, "bold"))
 info_label.pack()
 
-shutoff_label = tk.Label(root, text=f"System shutoff recorded at: {last_shutoff_date}")
+shutoff_label = tk.Label(root, text=f"Last shutoff logged at: {last_shutoff_date}")
 shutoff_label.pack()
 
-status_label = tk.Label(root, text=f"Current status: {current_status}")
+status_label = tk.Label(root, text=f"Current cooling state: {current_status}")
 status_label.pack()
 
-recommended_tolerance_label = tk.Label(root, text="Recommended Tolerance: 0.0055", font=("Arial", 12, "bold"))
-recommended_tolerance_label.pack()
+current_tolerance_label = tk.Label(root, text=f"Current accepted flow difference: {current_tolerance}(gal)")
+current_tolerance_label.pack()
 
-tolerance_frame = tk.Frame(root)
-tolerance_frame.pack(pady=10)
+# Admin Password Entry
+pw_frame = tk.Frame(root)
+pw_frame.pack(pady=10)
 
-tk.Label(tolerance_frame, text="Set Tolerance", font=("Arial", 12)).pack()
-tolerance_label = tk.Label(tolerance_frame, text=f"Current Tolerance: {current_tolerance}")
-tolerance_label.pack()
+tk.Label(pw_frame, text="Enter Admin Password", font=("Arial", 12)).pack()
+pw_entry = tk.Entry(pw_frame, show="*")
+pw_entry.pack()
 
-tolerance_input = tk.Entry(tolerance_frame)
-tolerance_input.pack()
+def check_password():
+    if pw_entry.get() == current_password:
+        pw_entry.delete(0, tk.END)
+        show_admin_panel()
+    else:
+        messagebox.showerror("Access Denied", "Incorrect password.")
 
-tk.Button(tolerance_frame, text="Submit", command=lambda: update_tolerance()).pack()
+tk.Button(pw_frame, text="Enter", command=check_password).pack(pady=5)
 
-# Function to activate system
+# Open solenoid to send monitored cooling
 def activate_system():
     global current_status, ignore_threshold
     GPIO.output(SOLENOID_PIN, GPIO.LOW)
-    current_status = "System Active"
+    current_status = "Active"
     update_labels()
     ignore_threshold = True
-    root.after(10000, reset_ignore_threshold)  # Use Tkinter instead of threading.Timer
+    root.after(10000, reset_ignore_threshold)
 
-# Function to deactivate system
+# Close solenoid, no more monitored cooling
 def deactivate_system():
     global current_status, last_shutoff_date
     GPIO.output(SOLENOID_PIN, GPIO.HIGH)
-    current_status = "Deactivated"
+    current_status = "Inactive"
     last_shutoff_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     update_labels()
 
-# Function to reset ignore threshold
 def reset_ignore_threshold():
     global ignore_threshold
     ignore_threshold = False
 
-# Function to update tolerance
-def update_tolerance():
-    global current_tolerance
-    try:
-        current_tolerance = float(tolerance_input.get())
-        tolerance_label.config(text=f"Current Tolerance: {current_tolerance}")
-        messagebox.showinfo("Success", "Tolerance updated successfully!")
-    except ValueError:
-        messagebox.showerror("Error", "Please enter a valid float value")
-        
-# Control Panel
+# Password protected admin control panel
+def show_admin_panel():
+    admin_win = tk.Toplevel(root)
+    admin_win.title("Admin Panel")
+    admin_win.geometry("350x250")
+
+    tk.Label(admin_win, text= f"Current password:").pack(pady=(10, 0))
+    pwd_entry = tk.Entry(admin_win, show="*")
+    pwd_entry.insert(0, current_password)
+    pwd_entry.pack()
+
+    tk.Label(admin_win, text="System name:").pack(pady=(10, 0))
+    name_entry = tk.Entry(admin_win)
+    name_entry.insert(0, system_name)
+    name_entry.pack()
+
+    tk.Label(admin_win, text="Acceptable flow difference:").pack(pady=(10, 0))
+    tol_entry = tk.Entry(admin_win)
+    tol_entry.insert(0, str(current_tolerance))
+    tol_entry.pack()
+
+    tk.Label(admin_win, text="Activation Delay (sec):").pack(pady=(10, 0))
+    dur_entry = tk.Entry(admin_win)
+    dur_entry.insert(0, str(duration_threshold))
+    dur_entry.pack()
+
+    def save_admin_settings():
+        global current_password, system_name, current_tolerance, duration_threshold
+        current_password   = pwd_entry.get()
+        system_name        = name_entry.get()
+        try:
+            current_tolerance   = float(tol_entry.get())
+            duration_threshold = float(dur_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Acceptable flow difference and duration must be numbers")
+            return
+
+        info_label.config(text=system_name)
+        messagebox.showinfo("Admin", "Settings saved.")
+        admin_win.destroy()
+
+    tk.Button(admin_win, text="Confirm changes", command=save_admin_settings).pack(pady=15)
+
+# Manual shutoff switch
 control_frame = tk.Frame(root)
 control_frame.pack(pady=10)
 
-tk.Label(control_frame, text="Control Panel", font=("Arial", 12)).pack()
-tk.Button(control_frame, text="ON", command=lambda: activate_system()).pack(side=tk.LEFT, padx=5)
-tk.Button(control_frame, text="OFF", command=lambda: deactivate_system()).pack(side=tk.RIGHT, padx=5)
+tk.Label(control_frame, text="Manual Shutoff", font=("Arial", 12)).pack()
+tk.Button(control_frame, text="ON", command=activate_system).pack(side=tk.LEFT, padx=5)
+tk.Button(control_frame, text="OFF", command=deactivate_system).pack(side=tk.LEFT, padx=5)
 
-# Graph Display
+# Graph
 fig, ax = plt.subplots(figsize=(6, 5))
 canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.get_tk_widget().pack()
 
-# Start monitoring sensors
 monitor_sensor_values()
 
-# Run the Tkinter loop
 try:
     root.mainloop()
 finally:
-    # Cleanup GPIO when the script exits
     GPIO.output(SOLENOID_PIN, GPIO.HIGH)
     time.sleep(1)
     GPIO.cleanup()
