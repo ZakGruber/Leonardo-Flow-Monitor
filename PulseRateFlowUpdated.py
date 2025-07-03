@@ -38,20 +38,20 @@ signal.signal(signal.SIGTERM, graceful_exit)
 PULSES_PER_GALLON = 2840
 
 # Global Variables
-current_password   = "admin123"
-ignore_threshold   = False
-last_shutoff_date  = "No shutoff recorded"
-current_status     = "Inactive"
-current_tolerance  = 0
-system_name        = "Flow Monitor 1"
+current_password = "admin123"
+ignore_threshold = False
+last_shutoff_date = "No shutoff recorded"
+current_status = "Inactive"
+current_tolerance = 0
+system_name = "Flow Monitor 1"
 duration_threshold = 10
 
 # Active variables
 sensor_differences = []
-time_stamps        = []
-flow_count1        = 0
-flow_count2        = 0
-start_time         = None
+time_stamps = []
+flow_count1 = 0
+flow_count2 = 0
+start_time = None
 
 
 # Functions to recieve a signal from the flow monitors
@@ -206,10 +206,10 @@ def show_admin_panel():
 
     def save_admin_settings():
         global current_password, system_name, current_tolerance, duration_threshold
-        current_password   = pwd_entry.get()
-        system_name        = name_entry.get()
+        current_password = pwd_entry.get()
+        system_name = name_entry.get()
         try:
-            current_tolerance   = float(tol_entry.get())
+            current_tolerance = float(tol_entry.get())
             duration_threshold = float(dur_entry.get())
         except ValueError:
             messagebox.showerror("Error", "Acceptable flow difference and duration must be numbers")
