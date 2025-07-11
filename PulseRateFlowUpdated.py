@@ -70,7 +70,7 @@ GPIO.add_event_detect(SENSOR2_PIN, GPIO.RISING, callback=pulse_detected2)
 def update_labels():
     status_label.config(text=f"Current cooling state: {current_status}")
     shutoff_label.config(text=f"Last shutoff logged at: {last_shutoff_date}")
-    current_tolerance_label.config(text=f"Current accepted flow difference: {current_tolerance}(gal)")
+    current_tolerance_label.config(text=f"Current accepted flow difference: {current_tolerance} (gal)")
     activation_delay_label.config(text=f"Current activation delay: {duration_threshold} (sec)")
 
 def monitor_sensor_values():
@@ -139,7 +139,7 @@ status_label.pack()
 shutoff_label = tk.Label(root, text=f"Last shutoff logged at: {last_shutoff_date}")
 shutoff_label.pack()
 
-current_tolerance_label = tk.Label(root, text=f"Current accepted flow difference: {current_tolerance}(gal)")
+current_tolerance_label = tk.Label(root, text=f"Current accepted flow difference: {current_tolerance} (gal)")
 current_tolerance_label.pack()
 
 activation_delay_label = tk.Label(root, text=f"Current activation delay: {duration_threshold} (sec)")
