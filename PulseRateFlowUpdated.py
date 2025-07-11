@@ -70,6 +70,8 @@ GPIO.add_event_detect(SENSOR2_PIN, GPIO.RISING, callback=pulse_detected2)
 def update_labels():
     status_label.config(text=f"Current cooling state: {current_status}")
     shutoff_label.config(text=f"Last shutoff logged at: {last_shutoff_date}")
+    current_tolerance_label.config(text=f"Current accepted flow difference: {current_tolerance}(gal)")
+    activation_delay_label.config(text=f"Current activation delay: {duration_threshold} (sec)")
 
 def monitor_sensor_values():
     global last_shutoff_date, start_time, current_status, ignore_threshold
@@ -131,14 +133,17 @@ root.geometry("600x650")
 info_label = tk.Label(root, text=system_name, font=("Arial", 14, "bold"))
 info_label.pack()
 
+status_label = tk.Label(root, text=f"Current cooling state: {current_status}", font=("Arial",20))
+status_label.pack()
+
 shutoff_label = tk.Label(root, text=f"Last shutoff logged at: {last_shutoff_date}")
 shutoff_label.pack()
 
-status_label = tk.Label(root, text=f"Current cooling state: {current_status}")
-status_label.pack()
-
 current_tolerance_label = tk.Label(root, text=f"Current accepted flow difference: {current_tolerance}(gal)")
 current_tolerance_label.pack()
+
+activation_delay_label = tk.Label(root, text=f"Current activation delay: {duration_threshold} (sec)")
+activation_delay_label.pack()
 
 # Admin Password Entry
 pw_frame = tk.Frame(root)
@@ -211,6 +216,7 @@ def show_admin_panel():
         try:
             current_tolerance = float(tol_entry.get())
             duration_threshold = float(dur_entry.get())
+            update_labels()
         except ValueError:
             messagebox.showerror("Error", "Acceptable flow difference and duration must be numbers")
             return
@@ -225,7 +231,7 @@ def show_admin_panel():
 control_frame = tk.Frame(root)
 control_frame.pack(pady=10)
 
-tk.Label(control_frame, text="Manual Shutoff", font=("Arial", 12)).pack()
+tk.Label(control_frame, text="ON/OFF", font=("Arial", 12)).pack()
 tk.Button(control_frame, text="ON", command=activate_system).pack(side=tk.LEFT, padx=5)
 tk.Button(control_frame, text="OFF", command=deactivate_system).pack(side=tk.LEFT, padx=5)
 
