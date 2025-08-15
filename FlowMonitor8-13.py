@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jul 2 2025
@@ -187,7 +188,12 @@ def reset_ignore_threshold():
 def show_admin_panel():
     admin_win = tk.Toplevel(root)
     admin_win.title("Admin Panel")
-    admin_win.geometry("350x250")
+    admin_win.geometry("350x280")
+    admin_win.transient(root)
+    admin_win.grab_set()
+    admin_win.focus_force()
+    admin_win.lift()
+
 
     tk.Label(admin_win, text= f"Current password:").pack(pady=(10, 0))
     pwd_entry = tk.Entry(admin_win, show="*")
